@@ -7,12 +7,14 @@ import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 //?} else
 /*import com.mojang.blaze3d.vertex.Tesselator;*/
 
+import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.vertex.PoseStack;
 import me.pieking1215.invmove.module.CVComponent;
 import me.pieking1215.invmove.module.Module;
 import me.pieking1215.invmove.module.VanillaModule;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.MouseHandler;
 import net.minecraft.client.ToggleKeyMapping;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.screens.Screen;
@@ -32,6 +34,8 @@ import net.minecraft.network.chat.MutableComponent;
 /*import net.minecraft.network.chat.TranslatableComponent;*/
 
 import net.minecraft.resources.ResourceLocation;
+import org.joml.Vector2d;
+import org.lwjgl.glfw.GLFW;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -57,6 +61,13 @@ public abstract class InvMove {
 
     private static final KeyMapping TOGGLE_MOVEMENT_KEY = new KeyMapping(
             "keybind.invmove.toggleMove",
+            InputConstants.Type.KEYSYM,
+            InputConstants.UNKNOWN.getValue(),
+            "keycategory.invmove"
+    );
+
+    private static final KeyMapping TOGGLE_MOUSE_KEY = new KeyMapping(
+            "keybind.invmove.toggleMouse",
             InputConstants.Type.KEYSYM,
             InputConstants.UNKNOWN.getValue(),
             "keycategory.invmove"
@@ -147,10 +158,17 @@ public abstract class InvMove {
     protected boolean wasSneaking = false;
     protected boolean wasMovementDisallowed = false;
     protected boolean wasToggleMovementPressed = false;
+    protected boolean wasToggleMousePressed = false;
 
     protected Map<ToggleKeyMapping, Boolean> wasToggleKeyDown = new HashMap<>();
 
     protected boolean forceRawKeyDown = false;
+
+    // Read in MouseHandlerMixin
+    protected boolean overrideMouseGrabbed = false;
+    protected Vector2d mouseLockedAt = new Vector2d(0);
+    // Read and written to in MouseHandlerMixin
+    public Vector2d fakeMousePosition = new Vector2d(0);
 
     public final List<Module> modules = new ArrayList<>();
 
@@ -160,6 +178,7 @@ public abstract class InvMove {
         this.modules.add(0, this.getVanillaModule());
 
         this.registerKeybind(TOGGLE_MOVEMENT_KEY);
+        this.registerKeybind(TOGGLE_MOUSE_KEY);
     }
 
     public Module getVanillaModule() {
@@ -263,6 +282,7 @@ public abstract class InvMove {
 
         boolean canMove = allowMovementInScreen(Minecraft.getInstance().screen);
         canMove = handleToggleMovementKey(Minecraft.getInstance().screen, canMove);
+        handleHeadMovement(canMove);
 
         if(canMove){
             wasMovementDisallowed = false;
@@ -353,6 +373,58 @@ public abstract class InvMove {
         } else {
             wasMovementDisallowed = false;
         }
+    }
+
+    private void handleHeadMovement(boolean canMove) {
+        if (!canMove) {
+            this.overrideMouseGrabbed = false;
+            this.wasToggleMousePressed = false;
+            return;
+        }
+
+        Minecraft minecraft = Minecraft.getInstance();
+
+        if (TOGGLE_MOUSE_KEY.isUnbound()) return;
+
+        TOGGLE_MOUSE_KEY.setDown(InputConstants.isKeyDown(minecraft.getWindow().getWindow(), TOGGLE_MOUSE_KEY.key.getValue()));
+
+        if (TOGGLE_MOUSE_KEY.isDown && !this.wasToggleMousePressed) {
+            if (this.overrideMouseGrabbed) {
+                releaseMouse();
+            } else {
+                grabMouse();
+            }
+        }
+
+        this.wasToggleMousePressed = TOGGLE_MOUSE_KEY.isDown;
+    }
+
+    public boolean getOverrideMouseGrabbed() {
+        return this.overrideMouseGrabbed;
+    }
+
+    public Vector2d getMouseLockedAt() {
+        return this.mouseLockedAt;
+    }
+
+    private void grabMouse() {
+        Window window = Minecraft.getInstance().getWindow();
+        MouseHandler mouseHandler = Minecraft.getInstance().mouseHandler;
+        this.mouseLockedAt.x = mouseHandler.xpos();
+        this.mouseLockedAt.y = mouseHandler.ypos();
+        int xpos = window.getScreenWidth() / 2;
+        int ypos = window.getScreenHeight() / 2;
+        InputConstants.grabOrReleaseMouse(window.getWindow(), GLFW.GLFW_CURSOR_DISABLED, xpos, ypos);
+        mouseHandler.setIgnoreFirstMove();
+        this.overrideMouseGrabbed = true;
+    }
+
+    private void releaseMouse() {
+        long window = Minecraft.getInstance().getWindow().getWindow();
+        // InputConstants.grabOrReleaseMouse, but in the opposite order (otherwise the position doesn't change due to being locked)
+        GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
+        GLFW.glfwSetCursorPos(window, this.mouseLockedAt.x, this.mouseLockedAt.y);
+        this.overrideMouseGrabbed = false;
     }
 
     private void tickKeybinds() {

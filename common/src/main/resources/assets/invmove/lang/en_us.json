@@ -44,6 +44,7 @@
 
   "keycategory.invmove": "InvMove",
   "keybind.invmove.toggleMove": "Toggle UI Movement",
+  "keybind.invmove.toggleMouse": "Toggle Head Movement",
 
   "key.invmove.modules": "Modules",
   "key.invmove.module.vanilla": "Vanilla",
