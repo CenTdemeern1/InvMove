@@ -34,7 +34,6 @@ import net.minecraft.network.chat.MutableComponent;
 /*import net.minecraft.network.chat.TranslatableComponent;*/
 
 import net.minecraft.resources.ResourceLocation;
-import org.joml.Vector2d;
 import org.lwjgl.glfw.GLFW;
 
 import java.io.File;
@@ -166,9 +165,11 @@ public abstract class InvMove {
 
     // Read in MouseHandlerMixin
     protected boolean overrideMouseGrabbed = false;
-    protected Vector2d mouseLockedAt = new Vector2d(0);
+    protected double mouseLockedAtX = 0;
+    protected double mouseLockedAtY = 0;
     // Read and written to in MouseHandlerMixin
-    public Vector2d fakeMousePosition = new Vector2d(0);
+    public double fakeMousePositionX = 0;
+    public double fakeMousePositionY = 0;
 
     public final List<Module> modules = new ArrayList<>();
 
@@ -403,15 +404,18 @@ public abstract class InvMove {
         return this.overrideMouseGrabbed;
     }
 
-    public Vector2d getMouseLockedAt() {
-        return this.mouseLockedAt;
+    public double getMouseLockedAtX() {
+        return this.mouseLockedAtX;
+    }
+    public double getMouseLockedAtY() {
+        return this.mouseLockedAtY;
     }
 
     private void grabMouse() {
         Window window = Minecraft.getInstance().getWindow();
         MouseHandler mouseHandler = Minecraft.getInstance().mouseHandler;
-        this.mouseLockedAt.x = mouseHandler.xpos();
-        this.mouseLockedAt.y = mouseHandler.ypos();
+        this.mouseLockedAtX = mouseHandler.xpos();
+        this.mouseLockedAtY = mouseHandler.ypos();
         int xpos = window.getScreenWidth() / 2;
         int ypos = window.getScreenHeight() / 2;
         InputConstants.grabOrReleaseMouse(window.getWindow(), GLFW.GLFW_CURSOR_DISABLED, xpos, ypos);
@@ -423,7 +427,7 @@ public abstract class InvMove {
         long window = Minecraft.getInstance().getWindow().getWindow();
         // InputConstants.grabOrReleaseMouse, but in the opposite order (otherwise the position doesn't change due to being locked)
         GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
-        GLFW.glfwSetCursorPos(window, this.mouseLockedAt.x, this.mouseLockedAt.y);
+        GLFW.glfwSetCursorPos(window, this.mouseLockedAtX, this.mouseLockedAtY);
         this.overrideMouseGrabbed = false;
     }
 

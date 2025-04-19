@@ -3,7 +3,6 @@ package me.pieking1215.invmove.mixin.client;
 import me.pieking1215.invmove.InvMove;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.MouseHandler;
-import org.joml.Vector2d;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -34,8 +33,8 @@ public class MouseHandlerMixin {
     public void onMoveHEAD(long l, double d, double e, CallbackInfo ci) {
         InvMove invMove = InvMove.instance();
         if (invMove.getOverrideMouseGrabbed()) {
-            this.xpos = invMove.fakeMousePosition.x;
-            this.ypos = invMove.fakeMousePosition.y;
+            this.xpos = invMove.fakeMousePositionX;
+            this.ypos = invMove.fakeMousePositionY;
         }
     }
 
@@ -43,11 +42,10 @@ public class MouseHandlerMixin {
     public void onMoveTail(long l, double d, double e, CallbackInfo ci) {
         InvMove invMove = InvMove.instance();
         if (invMove.getOverrideMouseGrabbed()) {
-            Vector2d mouseLockedAt = invMove.getMouseLockedAt();
-            invMove.fakeMousePosition.x = this.xpos;
-            invMove.fakeMousePosition.y = this.ypos;
-            this.xpos = mouseLockedAt.x;
-            this.ypos = mouseLockedAt.y;
+            invMove.fakeMousePositionX = this.xpos;
+            invMove.fakeMousePositionY = this.ypos;
+            this.xpos = invMove.getMouseLockedAtX();
+            this.ypos = invMove.getMouseLockedAtY();
         }
     }
 
@@ -56,7 +54,9 @@ public class MouseHandlerMixin {
         InvMove invMove = InvMove.instance();
         if (invMove.getOverrideMouseGrabbed() && window == this.minecraft.getWindow().getWindow()) {
             // Prevents the game from thinking you're AFK
+            //? if >=1.21.2 {
             this.minecraft.getFramerateLimitTracker().onInputReceived();
+            //?}
 
             ci.cancel();
         }
