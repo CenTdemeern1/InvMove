@@ -418,8 +418,14 @@ public abstract class InvMove {
         this.mouseLockedAtY = mouseHandler.ypos();
         int xpos = window.getScreenWidth() / 2;
         int ypos = window.getScreenHeight() / 2;
+        this.fakeMousePositionX = xpos;
+        this.fakeMousePositionY = ypos;
         InputConstants.grabOrReleaseMouse(window.getWindow(), GLFW.GLFW_CURSOR_DISABLED, xpos, ypos);
-        mouseHandler.setIgnoreFirstMove();
+        // This might be causing weird jumps in facing angles when toggling
+        // Might be specific to macOS? Like the vanilla issue when moving your mouse while closing the inventory
+        // It's inconsistent, so I can't really tell definitively, but this seems to be worsening it?
+        // Might be a race condition?
+//        mouseHandler.setIgnoreFirstMove();
         this.overrideMouseGrabbed = true;
     }
 
